@@ -10,7 +10,7 @@ class AppCubit extends Cubit<AppState> {
     emit(state.copyWith(listBreeds: listBreeds));
   }
 
-  void changeBreed({required String breed}) {
+  void changeBreed({required List<String> breed}) {
     emit(state.copyWith(breed: breed));
   }
 
@@ -18,12 +18,18 @@ class AppCubit extends Cubit<AppState> {
     emit(state.copyWith(listImages: listImages));
   }
 
-  void changeSelectedIndex({required int selectedIndex}) {
+  void changeSelectedIndex({required List<int> selectedIndex}) {
     emit(state.copyWith(selectedIndex: selectedIndex));
+    List<String> breeds = [];
+    for (int i in state.selectedIndex) {
+      breeds.add(state.listBreeds[i]);
+    }
+    changeBreed(breed: breeds);
+    fetchListImage();
   }
 
-  void changeLoadMore({required bool loadMore}) {
-    emit(state.copyWith(loadMore: loadMore));
+  void changeLength({required int length}) {
+    emit(state.copyWith(length: length));
   }
 
   Future<void> fetchListBreeds() async {
@@ -31,8 +37,6 @@ class AppCubit extends Cubit<AppState> {
     try {
       List<String> data = await Api().fetchListBreeds();
       changeListBreeds(listBreeds: data);
-      changeBreed(breed: data[0]);
-      fetchListImage();
       emit(state.copyWith(fetchBreedsStatus: LoadStatus.success));
     } catch (e) {
       emit(state.copyWith(fetchBreedsStatus: LoadStatus.fail));
@@ -40,13 +44,21 @@ class AppCubit extends Cubit<AppState> {
   }
 
   Future<void> fetchListImage() async {
-    emit(state.copyWith(fetchImagesStatus: LoadStatus.loading));
-    try {
-      List<String> data = await Api().fetchListImages(state.breed);
-      changeListImages(listImages: data);
-      emit(state.copyWith(fetchImagesStatus: LoadStatus.success));
-    } catch (e) {
-      emit(state.copyWith(fetchImagesStatus: LoadStatus.fail));
+    if (state.selectedIndex.isNotEmpty) {
+      emit(state.copyWith(fetchImagesStatus: LoadStatus.loading));
+      try {
+        List<String> data = [];
+        for (String i in state.breed) {
+          data.addAll(await Api().fetchListImages(i));
+        }
+        data.shuffle();
+        changeListImages(listImages: data);
+        emit(state.copyWith(fetchImagesStatus: LoadStatus.success));
+      } catch (e) {
+        emit(state.copyWith(fetchImagesStatus: LoadStatus.fail));
+      }
+    } else {
+      emit(state.copyWith(fetchImagesStatus: LoadStatus.initial));
     }
   }
 }

@@ -3,21 +3,21 @@ import 'package:equatable/equatable.dart';
 
 class AppState extends Equatable {
   final List<String> listBreeds;
-  final String breed;
+  final List<String> breed;
   final List<String> listImages;
   final LoadStatus fetchBreedsStatus;
   final LoadStatus fetchImagesStatus;
-  final int selectedIndex;
-  final bool loadMore;
+  final List<int> selectedIndex;
+  final int length;
 
   const AppState(
       {this.listBreeds = const [],
-      this.breed = '',
+      this.breed = const [],
       this.listImages = const [],
       this.fetchBreedsStatus = LoadStatus.initial,
       this.fetchImagesStatus = LoadStatus.initial,
-      this.selectedIndex = 0,
-      this.loadMore = false});
+      this.selectedIndex = const [],
+      this.length = 10});
 
   @override
   List<Object?> get props => [
@@ -27,17 +27,18 @@ class AppState extends Equatable {
         fetchBreedsStatus,
         fetchImagesStatus,
         selectedIndex,
-        loadMore
+        length
       ];
 
   AppState copyWith(
       {List<String>? listBreeds,
-      String? breed,
+      List<String>? breed,
       List<String>? listImages,
       LoadStatus? fetchBreedsStatus,
       LoadStatus? fetchImagesStatus,
-      int? selectedIndex,
-      bool? loadMore}) {
+      LoadStatus? extendStatus,
+      List<int>? selectedIndex,
+      int? length}) {
     return AppState(
         listBreeds: listBreeds ?? this.listBreeds,
         breed: breed ?? this.breed,
@@ -45,6 +46,6 @@ class AppState extends Equatable {
         fetchBreedsStatus: fetchBreedsStatus ?? this.fetchBreedsStatus,
         fetchImagesStatus: fetchImagesStatus ?? this.fetchImagesStatus,
         selectedIndex: selectedIndex ?? this.selectedIndex,
-        loadMore: loadMore ?? this.loadMore);
+        length: length ?? this.length);
   }
 }

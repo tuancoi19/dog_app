@@ -4,6 +4,7 @@ import 'package:dog_app/ui/app_state.dart';
 import 'package:dog_app/ui/widget/Item_image.dart';
 import 'package:dog_app/ui/widget/item_breed.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 class MyHomePage extends StatefulWidget {
@@ -16,16 +17,19 @@ class MyHomePage extends StatefulWidget {
 class _MyHomePageState extends State<MyHomePage> {
   late AppCubit cubit;
   ScrollController scrollController = ScrollController();
+  late final int length;
 
   @override
   void initState() {
     super.initState();
+    length = 10;
     cubit = BlocProvider.of(context);
     cubit.fetchListBreeds();
-    scrollController.addListener(() {
-      if (scrollController.position.pixels ==
+    scrollController.addListener(() async {
+      if (scrollController.position.pixels >=
           scrollController.position.maxScrollExtent) {
-        showDialog(context: context, builder: (context) => loadMoreDialog());
+        Future.delayed(const Duration(milliseconds: 500),
+            () => cubit.changeLength(length: cubit.state.length + length));
       }
     });
   }
@@ -52,13 +56,16 @@ class _MyHomePageState extends State<MyHomePage> {
                       ? ListView.builder(
                           itemBuilder: (context, index) => ItemBreed(
                               onPressed: () {
-                                cubit.changeSelectedIndex(selectedIndex: index);
-                                cubit.changeBreed(
-                                    breed: state.listBreeds[index]);
-                                cubit.fetchListImage();
-                                cubit.changeLoadMore(loadMore: false);
+                                List<int> selected =
+                                    state.selectedIndex.toList();
+                                selected.contains(index)
+                                    ? selected.remove(index)
+                                    : selected.add(index);
+                                cubit.changeSelectedIndex(
+                                    selectedIndex: selected);
+                                cubit.changeLength(length: 10);
                               },
-                              isSelected: state.selectedIndex == index,
+                              isSelected: state.selectedIndex.contains(index),
                               name: state.listBreeds[index]),
                           itemCount: state.listBreeds.length,
                           scrollDirection: Axis.horizontal,
@@ -67,52 +74,98 @@ class _MyHomePageState extends State<MyHomePage> {
                 ),
               ),
               Expanded(
-                flex: 9,
-                child: Padding(
-                    padding: const EdgeInsets.only(left: 20, right: 20),
-                    child: state.fetchImagesStatus == LoadStatus.success
-                        ? ListView.builder(
-                            controller: scrollController,
-                            itemBuilder: (context, index) =>
-                                ItemImage(url: state.listImages[index]),
-                            itemCount: state.loadMore == false
-                                ? 10
-                                : state.listImages.length,
-                          )
-                        : const Center(child: CircularProgressIndicator())),
-              )
+                  flex: 9,
+                  child: state.fetchImagesStatus == LoadStatus.success
+                      ? RefreshIndicator(
+                          onRefresh: () async {
+                            cubit.changeLength(length: 10);
+                            await cubit.fetchListImage();
+                          },
+                          child: ListView.builder(
+                              padding:
+                                  const EdgeInsets.only(left: 20, right: 20),
+                              controller: scrollController,
+                              itemBuilder: (context, index) {
+                                return index < state.length
+                                    ? ItemImage(url: state.listImages[index])
+                                    : index < state.listImages.length
+                                        ? const SizedBox(
+                                            width: double.infinity,
+                                            height: 50,
+                                            child: Center(
+                                                child:
+                                                    CircularProgressIndicator()),
+                                          )
+                                        : const SizedBox();
+                              },
+                              itemCount: state.length + 1),
+                        )
+                      : state.fetchImagesStatus == LoadStatus.initial
+                          ? const SizedBox()
+                          : const Center(child: CircularProgressIndicator())),
             ],
           ),
         ),
         floatingActionButton: FloatingActionButton(
           onPressed: () async {
-            await cubit.fetchListImage();
-            cubit.changeLoadMore(loadMore: false);
+            showDialog(
+              context: context,
+              builder: (context) => selectedListDialog(),
+            );
           },
-          tooltip: 'Refresh',
-          child: const Icon(Icons.refresh),
+          tooltip: 'Selected List',
+          child: const Icon(Icons.list),
         ),
       );
     });
   }
 
-  Widget loadMoreDialog() {
-    return AlertDialog(
-      title: const Text('Load more'),
-      content: const Text('Do you want to load more images?'),
-      actions: [
-        TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              cubit.changeLoadMore(loadMore: true);
+  Widget selectedListDialog() {
+    List<int> data = cubit.state.selectedIndex.toList();
+    List<bool> isChecked = List<bool>.filled(cubit.state.breed.length, true);
+    return StatefulBuilder(builder: (context, setState) {
+      return AlertDialog(
+        title: const Text('Selected Breeds'),
+        content: SizedBox(
+          width: 300,
+          height: 500,
+          child: ListView.builder(
+            itemCount: cubit.state.selectedIndex.length,
+            itemBuilder: (context, index) {
+              return CheckboxListTile(
+                title: Text(cubit.state.breed[index]),
+                value: isChecked[index],
+                onChanged: (value) {
+                  setState(
+                    () {
+                      isChecked[index] = value!;
+                    },
+                  );
+                  value == false
+                      ? data.remove(cubit.state.selectedIndex[index])
+                      : data.contains(cubit.state.selectedIndex[index])
+                          ? null
+                          : data.add(cubit.state.selectedIndex[index]);
+                },
+              );
             },
-            child: const Text('Yes')),
-        TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-            },
-            child: const Text('No'))
-      ],
-    );
+          ),
+        ),
+        actions: [
+          TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+                cubit.changeSelectedIndex(selectedIndex: data);
+                cubit.changeLength(length: 10);
+              },
+              child: const Text('OK')),
+          TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+              },
+              child: const Text('Cancel'))
+        ],
+      );
+    });
   }
 }
