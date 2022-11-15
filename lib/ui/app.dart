@@ -4,7 +4,6 @@ import 'package:dog_app/ui/app_state.dart';
 import 'package:dog_app/ui/widget/Item_image.dart';
 import 'package:dog_app/ui/widget/item_breed.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 class MyHomePage extends StatefulWidget {
@@ -82,8 +81,6 @@ class _MyHomePageState extends State<MyHomePage> {
                             await cubit.fetchListImage();
                           },
                           child: ListView.builder(
-                              padding:
-                                  const EdgeInsets.only(left: 20, right: 20),
                               controller: scrollController,
                               itemBuilder: (context, index) {
                                 return index < state.length

@@ -9,7 +9,7 @@ class ItemImage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       height: MediaQuery.of(context).size.height * 0.3,
-      margin: const EdgeInsets.only(top: 8, bottom: 8),
+      margin: const EdgeInsets.only(top: 8, bottom: 8, left: 20, right: 20),
       child: Image.network(
         url,
         fit: BoxFit.cover,
